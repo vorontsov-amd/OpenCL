@@ -6,6 +6,11 @@
 
 namespace OpenCLApp {
 
+    enum SortDirection {
+        INCREASING = 0,
+        DECREASING = -1
+    };
+
     class BitonicSorter final
     {
     private:
@@ -19,7 +24,7 @@ namespace OpenCLApp {
         BitonicSorter();
         
         template <typename Iterator>
-        void operator() (Iterator begin, Iterator end); 
+        void operator() (Iterator begin, Iterator end, SortDirection direction = INCREASING); 
 
     private:
         cl::vector<cl::Device> initDevices();

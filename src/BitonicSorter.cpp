@@ -2,6 +2,9 @@
 #include <fstream>
 #include <random>
 #include <iostream>
+#include <cmath>
+#include <algorithm>
+#include <chrono>
 
 namespace OpenCLApp {
 
@@ -19,6 +22,7 @@ namespace OpenCLApp {
     };
 
     cl::vector<cl::Device> BitonicSorter::initDevices() {
+        
         cl::vector<cl::Device> devices;
 
         try {
@@ -71,65 +75,41 @@ namespace OpenCLApp {
         {}
 
     template <typename Iterator> 
-    void BitonicSorter::operator() (Iterator begin, Iterator end) {
+    void BitonicSorter::operator() (Iterator begin, Iterator end, SortDirection direction) {
         using Type = typename std::iterator_traits<Iterator>::value_type;
 
-        //!TODO change it
-        // std::vector<Type> data;
-        // std::copy(begin, end, std::back_inserter(data));
+        auto numOfElem  = std::distance(begin, end) + 1;
+        size_t capacity = 1 << (int)std::ceil(log2(numOfElem));
 
-        // auto SZ = std::distance(begin, end);
-        // SZ++;
+        Type aggregate = std::numeric_limits<Type>::max();
+        if (direction == DECREASING) aggregate = -aggregate;
 
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> random(0, 150);
+        std::vector<Type> data(capacity, aggregate);
+        std::copy(begin, end, data.begin());
 
-        auto SZ = 64;
-
-        float data[SZ] {};
-        for (auto& x: data) {
-            x = random(gen);
-        }
-
-        for (auto& x: data) {
-            std::cout << x << ' ';
-        }
-        std::cout << '\n';
-
-        // Create buffer and make it a kernel argument
-        cl::Buffer buffer(context_, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(data), data);
+        cl::Buffer buffer(context_, data.begin(), data.end(), false);
 
         auto local_size = kernels_[BSORT_INIT].getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(devices_[0]);
-        size_t global_size = SZ/8;
+        size_t global_size = capacity / 8;
 
-        local_size = (int)pow(2, trunc(log2(local_size))); 
+        local_size = 1 << (int)trunc(log2(local_size)); 
 
         if(global_size < local_size) {
             local_size = global_size;
         }
 
-        // std::cout << "local size = " << local_size << ", global size = " << global_size << '\n';
-
         kernels_[BSORT_INIT].setArg(0, buffer);
-        kernels_[BSORT_INIT].setArg(1, 8 * local_size * sizeof(float), NULL);
+        kernels_[BSORT_INIT].setArg(1, 8 * local_size * sizeof(Type), NULL);
 
         // Create queue and enqueue kernel-execution command
         cl::NDRange offset {0};
         cl::NDRange range {1};
         queue_.enqueueNDRangeKernel(kernels_[BSORT_INIT], offset, global_size, local_size);
-        queue_.enqueueReadBuffer(buffer, CL_TRUE, 0, sizeof(data), data);
-
-        // for (auto x: data) {
-        //     std::cout << x << " ";
-        // }
-        // std::cout << '\n';
-
 
         kernels_[BSORT_STAGE_0].setArg(0, buffer);
-        kernels_[BSORT_STAGE_0].setArg(1, 8 * local_size * sizeof(float), NULL);
+        kernels_[BSORT_STAGE_0].setArg(1, 8 * local_size * sizeof(Type), NULL);
         kernels_[BSORT_STAGE_N].setArg(0, buffer);
-        kernels_[BSORT_STAGE_N].setArg(1, 8 * local_size * sizeof(float), NULL);
+        kernels_[BSORT_STAGE_N].setArg(1, 8 * local_size * sizeof(Type), NULL);
 
         int num_stages = global_size/local_size;
         for(int high_stage = 2; high_stage < num_stages; high_stage <<= 1) {
@@ -146,32 +126,23 @@ namespace OpenCLApp {
         }
 
         kernels_[BSORT_MERGE].setArg(0, buffer);
-        kernels_[BSORT_MERGE].setArg(1, 8 * local_size * sizeof(float), NULL);
+        kernels_[BSORT_MERGE].setArg(1, 8 * local_size * sizeof(Type), NULL);
         kernels_[BSORT_MERGE_LAST].setArg(0, buffer);
-        kernels_[BSORT_MERGE_LAST].setArg(1, 8 * local_size * sizeof(float), NULL);
+        kernels_[BSORT_MERGE_LAST].setArg(1, 8 * local_size * sizeof(Type), NULL);
 
         /* Set the sort direction */
-        int direction = 0;
         kernels_[BSORT_MERGE].setArg(3, direction);
         kernels_[BSORT_MERGE_LAST].setArg(2, direction);
 
         /* Perform the bitonic merge */
         for(int stage = num_stages; stage > 1; stage >>= 1) {
-
             kernels_[BSORT_MERGE].setArg(2, stage);
-
             queue_.enqueueNDRangeKernel(kernels_[BSORT_MERGE], offset, global_size, local_size); 
         }
 
         queue_.enqueueNDRangeKernel(kernels_[BSORT_MERGE_LAST], offset, global_size, local_size); 
 
-        /* Read the result */
-        queue_.enqueueReadBuffer(buffer, CL_TRUE, 0, sizeof(data), data);
-
-        for (auto& x: data) {
-            std::cout << x << ' ';
-        }
-        // std::copy(data.begin(), data.end(), begin);
+        cl::copy(queue_, buffer, begin, end);
     }
 
 };
@@ -182,22 +153,28 @@ int main() {
 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> random(0, 15);
-    float data[16] {};
+    std::uniform_int_distribution<> random(0, 10000000);
+    std::vector<float> data(1 << 24);
     for (auto& x: data) {
         x = random(gen);
     }
+
+    std::vector<float> data2 {data};
 
     // for (auto& x: data) {
     //     std::cout << x << ' ';
     // }
 
-    std::cout << std::endl;
-
     OpenCLApp::BitonicSorter sort;
 
-    sort(&data[0], &data[15]);
-
+    auto begin = std::chrono::system_clock::now();
+    sort(data.begin(), data.end());
+    auto end = std::chrono::system_clock::now() - begin;
+    std::cout << std::chrono::duration_cast<std::chrono::duration<float>> (end).count() << "\n";
+    begin = std::chrono::system_clock::now();
+    std::sort(data.begin(), data.end());
+    end = std::chrono::system_clock::now() - begin;
+    std::cout << std::chrono::duration_cast<std::chrono::duration<float>> (end).count() << "\n";
     // for (auto& x: data) {
     //     std::cout << x << ' ';
     // }
