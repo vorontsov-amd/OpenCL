@@ -5,7 +5,7 @@
 #include <chrono>
 
 
-int main() {
+int main() try {
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -36,6 +36,13 @@ int main() {
     // }
 
 
+}
+
+catch (cl::Error& error) {
+    std::cout << error.what() << ". Error code = " << error.err() << '\n';
+}
+catch (std::exception& error) {
+    std::cout << error.what() << "\n";
 }
 
 
