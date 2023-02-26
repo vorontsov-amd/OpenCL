@@ -6,29 +6,37 @@
 
 
 int main() try {
+    using type = float;
 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> random(0, 10000000);
-    std::vector<float> data(1 << 24);
+    std::uniform_int_distribution<> random(-1000, 1000);
+    std::vector<type> data(1 << 22);
     for (auto& x: data) {
         x = random(gen);
     }
 
-    std::vector<float> data2 {data};
+    std::vector<type> data2 {data};
 
     // for (auto& x: data) {
     //     std::cout << x << ' ';
     // }
 
-    OpenCLApp::BitonicSorter<float> sort;
+    OpenCLApp::BitonicSorter<type> sort;
 
     auto begin = std::chrono::system_clock::now();
     sort(data.begin(), data.end());
     auto end = std::chrono::system_clock::now() - begin;
     std::cout << std::chrono::duration_cast<std::chrono::duration<float>> (end).count() << "\n";
     begin = std::chrono::system_clock::now();
-    std::sort(data.begin(), data.end());
+    std::sort(data2.begin(), data2.end());
+
+    // for (int i = 0; i < data.size(); ++i) {
+    //     if (data[i] != data2[i]) {
+    //         std::cout << "FAIL";
+    //     }
+    // }
+
     end = std::chrono::system_clock::now() - begin;
     std::cout << std::chrono::duration_cast<std::chrono::duration<float>> (end).count() << "\n";
     // for (auto& x: data) {
