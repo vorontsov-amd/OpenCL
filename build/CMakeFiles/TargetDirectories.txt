@@ -1,0 +1,13 @@
+/home/amadey/Документы/Projects/OpenCL/build/CMakeFiles/edit_cache.dir
+/home/amadey/Документы/Projects/OpenCL/build/CMakeFiles/rebuild_cache.dir
+/home/amadey/Документы/Projects/OpenCL/build/CMakeFiles/list_install_components.dir
+/home/amadey/Документы/Projects/OpenCL/build/CMakeFiles/install.dir
+/home/amadey/Документы/Projects/OpenCL/build/CMakeFiles/install/local.dir
+/home/amadey/Документы/Projects/OpenCL/build/CMakeFiles/install/strip.dir
+/home/amadey/Документы/Projects/OpenCL/build/bsort/CMakeFiles/bsort.dir
+/home/amadey/Документы/Projects/OpenCL/build/bsort/CMakeFiles/edit_cache.dir
+/home/amadey/Документы/Projects/OpenCL/build/bsort/CMakeFiles/rebuild_cache.dir
+/home/amadey/Документы/Projects/OpenCL/build/bsort/CMakeFiles/list_install_components.dir
+/home/amadey/Документы/Projects/OpenCL/build/bsort/CMakeFiles/install.dir
+/home/amadey/Документы/Projects/OpenCL/build/bsort/CMakeFiles/install/local.dir
+/home/amadey/Документы/Projects/OpenCL/build/bsort/CMakeFiles/install/strip.dir
