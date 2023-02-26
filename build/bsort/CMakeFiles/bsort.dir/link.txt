@@ -1,1 +1,0 @@
-/usr/bin/c++  -O2 -Wall -O3 -DNDEBUG CMakeFiles/bsort.dir/src/BitonicSorter.cpp.o -o ../bin/bsort  /usr/lib/libOpenCL.so 

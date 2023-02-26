@@ -1,0 +1,2 @@
+#pragma once
+#cmakedefine CL_PROGRAM_PATH "@CL_PROGRAM_PATH@"

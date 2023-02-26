@@ -7,7 +7,9 @@ set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -O2 -Wall")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_BUILD_TYPE RELEASE)
 
-add_compile_definitions(TYPE=int)
+set(TYPE "int" CACHE STRING "Type to compile with")
+message(STATUS "Using type = ${TYPE}")
+add_compile_definitions(TYPE=${TYPE})
 
 add_subdirectory(bsort)
-# add_subdirectory(test)
+add_subdirectory(test)
