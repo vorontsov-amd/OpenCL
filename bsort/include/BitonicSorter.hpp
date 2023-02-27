@@ -4,10 +4,6 @@
 #include <iostream>
 #include "sourcePath.h"
 
-
-#define LOX std::cerr << __LINE__ << '\n';
-
-
 #define CL_HPP_TARGET_OPENCL_VERSION 220
 #define CL_HPP_ENABLE_EXCEPTIONS
 
