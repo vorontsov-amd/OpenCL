@@ -35,15 +35,15 @@ namespace OpenCLApp {
         
         template <typename Iterator>
         void operator() (Iterator begin, Iterator end, SortDirection direction = INCREASING); 
+        std::string getOpenCLAppInfo() noexcept;
 
     private:
         cl::vector<cl::Device> initDevices();
         cl::Program initProgram();
-        cl::vector<cl::Kernel> initKernels();
+        cl::vector<cl::Kernel> initKernels();        
     };
 
 };
-
 
 
 
@@ -61,6 +61,11 @@ namespace OpenCLApp {
             BSORT_MERGE_LAST
         };
 
+        std::string toString(cl_bool x) {
+            if (x) return "true";
+            return "false";
+        }
+
     };
 
     //------------------------------------------------------------------------------------------------------------------------------
@@ -76,7 +81,7 @@ namespace OpenCLApp {
         }
 
         catch (cl::Error& error) {
-            if (error.err() & CL_DEVICE_NOT_FOUND) {
+            if (error.err() == CL_DEVICE_NOT_FOUND) {
                 platform_.getDevices(CL_DEVICE_TYPE_CPU, &devices);
                 return devices;
             }
@@ -233,9 +238,95 @@ namespace OpenCLApp {
                           << buildlog << std::endl;
             }
         }
-        else throw;
+        else throw std::runtime_error(getOpenCLAppInfo());
     }
     
+    //------------------------------------------------------------------------------------------------------------------------------
+
+    template <typename T> 
+    std::string BitonicSorter<T>::getOpenCLAppInfo() noexcept {
+
+        std::string log;
+
+        try {
+            //Info about Platform-------------------------------------------------
+            log += "Platform info:\n";
+            log += "CL_PLATFORM_NAME: ";
+            log += platform_.getInfo<CL_PLATFORM_NAME>();
+            log += "\n";
+
+            log += "CL_PLATFORM_VENDOR: ";
+            log += platform_.getInfo<CL_PLATFORM_VENDOR>();
+            log += "\n";
+            
+            log += "CL_PLATFORM_VERSION: ";
+            log += platform_.getInfo<CL_PLATFORM_VERSION>();
+            log += "\n";
+
+            log += "CL_PLATFORM_PROFILE: ";
+            log += platform_.getInfo<CL_PLATFORM_PROFILE>();
+            log += "\n";
+            //--------------------------------------------------------------------
+            //Info about devices--------------------------------------------------
+            log += "device size = ";
+            log += std::to_string(devices_.size());
+            for (auto&& device: devices_) {
+                log += "Device info:\n";
+                log += "CL_DEVICE_NAME: ";
+                log += device.getInfo<CL_DEVICE_NAME>();
+                log += "\n";
+
+                log += "CL_DEVICE_AVAILABLE: ";
+                log += toString(device.getInfo<CL_DEVICE_AVAILABLE>());
+                log += "\n";
+
+                log += "CL_DEVICE_VERSION: ";
+                log += device.getInfo<CL_DEVICE_VERSION>();
+                log += "\n";
+
+                log += "CL_DEVICE_COMPILER_AVAILABLE: ";
+                log += toString(device.getInfo<CL_DEVICE_COMPILER_AVAILABLE>());
+                log += "\n";
+            }
+            //--------------------------------------------------------------------
+            //Info about context--------------------------------------------------
+            log += "Context info:\n";
+            log += "CL_CONTEXT_REFERENCE_COUNT: ";
+            log += std::to_string(context_.getInfo<CL_CONTEXT_REFERENCE_COUNT>());
+            log += "\n";
+            
+            log += "CL_CONTEXT_NUM_DEVICES: ";
+            log += std::to_string(context_.getInfo<CL_CONTEXT_NUM_DEVICES>());
+            log += "\n";
+            //--------------------------------------------------------------------
+        }
+        catch (cl::Error& error) {
+            log += "\nError:\n";
+            auto err = error.err();
+            //Platform err---------------------------------------------------------
+            if (err == CL_INVALID_PLATFORM)   log += "CL_INVALID_PLATFORM\n";
+            //Device err-----------------------------------------------------------
+            if (err == CL_INVALID_DEVICE)     log += "CL_INVALID_DEVICE\n";
+            //Context err----------------------------------------------------------
+            if (err == CL_INVALID_CONTEXT)    log += "CL_INVALID_CONTEXT\n";
+            //Other err------------------------------------------------------------
+            if (err == CL_INVALID_VALUE)      log += "CL_INVALID_VALUE\n";
+            if (err == CL_OUT_OF_RESOURCES)   log += "CL_OUT_OF_RESOURCES\n";
+            if (err == CL_OUT_OF_HOST_MEMORY) log += "CL_OUT_OF_HOST_MEMORY\n";
+
+            log += "what(): ";
+            log += error.what();
+            log += ". err code = ";
+            log += error.err();
+        }
+        catch (std::exception& error) {
+            log += "Error in a function that create exception.\n";
+            log += error.what();
+        }
+
+        return log;
+    }
+
     //------------------------------------------------------------------------------------------------------------------------------
 
     template <typename T>

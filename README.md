@@ -20,14 +20,14 @@ To compile each of the cache you need to use сmake in the directory build:
 $ mkdir build
 $ cd build
 $ сmake ..
-$ make
+$ cmake --build
 ```
 
 To select the type of input surrenders use:
 
 ``` cmd
 $ сmake .. -DTYPE=type
-$ make
+$ cmake --build
 ```
 where "type" is the built-in type of the C/C++ languages (except char). The default setting is int.
 ## Run the program:
