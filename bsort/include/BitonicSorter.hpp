@@ -35,7 +35,7 @@ namespace OpenCLApp {
         
         template <typename Iterator>
         void operator() (Iterator begin, Iterator end, SortDirection direction = INCREASING); 
-        std::string getOpenCLAppInfo() noexcept;
+        std::string getOpenCLAppInfo(cl::Error& err) noexcept;
 
     private:
         cl::vector<cl::Device> initDevices();
@@ -238,15 +238,20 @@ namespace OpenCLApp {
                           << buildlog << std::endl;
             }
         }
-        else throw std::runtime_error(getOpenCLAppInfo());
+        else throw std::runtime_error(getOpenCLAppInfo(error));
     }
     
     //------------------------------------------------------------------------------------------------------------------------------
 
     template <typename T> 
-    std::string BitonicSorter<T>::getOpenCLAppInfo() noexcept {
+    std::string BitonicSorter<T>::getOpenCLAppInfo(cl::Error& err) noexcept {
 
         std::string log;
+        log += "current Error: ";
+        log += err.what();
+        log += ". Err code = ";
+        log += std::to_string(err.err());
+        log += "\n";
 
         try {
             //Info about Platform-------------------------------------------------
@@ -270,6 +275,7 @@ namespace OpenCLApp {
             //Info about devices--------------------------------------------------
             log += "device size = ";
             log += std::to_string(devices_.size());
+            log += "\n";
             for (auto&& device: devices_) {
                 log += "Device info:\n";
                 log += "CL_DEVICE_NAME: ";
@@ -317,7 +323,7 @@ namespace OpenCLApp {
             log += "what(): ";
             log += error.what();
             log += ". err code = ";
-            log += error.err();
+            log += std::to_string(error.err());
         }
         catch (std::exception& error) {
             log += "Error in a function that create exception.\n";
