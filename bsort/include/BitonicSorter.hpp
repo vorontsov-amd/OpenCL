@@ -5,6 +5,8 @@
 #include "sourcePath.h"
 #include <new>
 
+#define LOX std::cerr << __LINE__ << '\n';
+
 #define CL_HPP_TARGET_OPENCL_VERSION 220
 #define CL_HPP_ENABLE_EXCEPTIONS
 
@@ -85,7 +87,7 @@ namespace OpenCLApp {
             catch (cl::Error& error) {
                 platform.getDevices(CL_DEVICE_TYPE_CPU, &devices_);
             }
-            if (!devices_.empty()) return platform;
+            if (!devices_.empty())
         }
         throw std::runtime_error("Can't find any platform");
     }
