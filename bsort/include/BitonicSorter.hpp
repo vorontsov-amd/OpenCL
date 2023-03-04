@@ -5,8 +5,6 @@
 #include "sourcePath.h"
 #include <new>
 
-#define LOX std::cerr << __LINE__ << '\n';
-
 #define CL_HPP_TARGET_OPENCL_VERSION 220
 #define CL_HPP_ENABLE_EXCEPTIONS
 
@@ -82,13 +80,14 @@ namespace OpenCLApp {
         cl::Platform::get(&platforms);
         for (auto&& platform : platforms) {
             try {
-                platform.getDevices(CL_DEVICE_TYPE_GPU, &devices_);
+                platform.getDevices(CL_DEVICE_TYPE_CPU, &devices_);
             } 
             catch (cl::Error& error) {
                 platform.getDevices(CL_DEVICE_TYPE_CPU, &devices_);
             }
             if (!devices_.empty()) return platform;
         }
+
         throw std::runtime_error("Can't find any platform");
     }
 
@@ -278,57 +277,61 @@ namespace OpenCLApp {
         log += "\n";
 
         try {
-            //Info about Platform-------------------------------------------------
-            log += "Platform info:\n";
-            log += "CL_PLATFORM_NAME: ";
-            log += platform_.getInfo<CL_PLATFORM_NAME>();
-            log += "\n";
-
-            log += "CL_PLATFORM_VENDOR: ";
-            log += platform_.getInfo<CL_PLATFORM_VENDOR>();
-            log += "\n";
-            
-            log += "CL_PLATFORM_VERSION: ";
-            log += platform_.getInfo<CL_PLATFORM_VERSION>();
-            log += "\n";
-
-            log += "CL_PLATFORM_PROFILE: ";
-            log += platform_.getInfo<CL_PLATFORM_PROFILE>();
-            log += "\n";
-            //--------------------------------------------------------------------
-            //Info about devices--------------------------------------------------
-            log += "device size = ";
-            log += std::to_string(devices_.size());
-            log += "\n";
-            for (auto&& device: devices_) {
-                log += "Device info:\n";
-                log += "CL_DEVICE_NAME: ";
-                log += device.getInfo<CL_DEVICE_NAME>();
+            if (err.err() != CL_PLATFORM_NOT_FOUND_KHR) {
+                //Info about Platform-------------------------------------------------
+                log += "Platform info:\n";
+                log += "CL_PLATFORM_NAME: ";
+                log += platform_.getInfo<CL_PLATFORM_NAME>();
                 log += "\n";
 
-                log += "CL_DEVICE_AVAILABLE: ";
-                log += toString(device.getInfo<CL_DEVICE_AVAILABLE>());
+                log += "CL_PLATFORM_VENDOR: ";
+                log += platform_.getInfo<CL_PLATFORM_VENDOR>();
+                log += "\n";
+                
+                log += "CL_PLATFORM_VERSION: ";
+                log += platform_.getInfo<CL_PLATFORM_VERSION>();
                 log += "\n";
 
-                log += "CL_DEVICE_VERSION: ";
-                log += device.getInfo<CL_DEVICE_VERSION>();
+                log += "CL_PLATFORM_PROFILE: ";
+                log += platform_.getInfo<CL_PLATFORM_PROFILE>();
                 log += "\n";
+                //--------------------------------------------------------------------
+                //Info about devices--------------------------------------------------
+                log += "device size = ";
+                log += std::to_string(devices_.size());
+                log += "\n";
+                for (auto&& device: devices_) {
+                    log += "Device info:\n";
+                    log += "CL_DEVICE_NAME: ";
+                    log += device.getInfo<CL_DEVICE_NAME>();
+                    log += "\n";
 
-                log += "CL_DEVICE_COMPILER_AVAILABLE: ";
-                log += toString(device.getInfo<CL_DEVICE_COMPILER_AVAILABLE>());
+                    log += "CL_DEVICE_AVAILABLE: ";
+                    log += toString(device.getInfo<CL_DEVICE_AVAILABLE>());
+                    log += "\n";
+
+                    log += "CL_DEVICE_VERSION: ";
+                    log += device.getInfo<CL_DEVICE_VERSION>();
+                    log += "\n";
+
+                    log += "CL_DEVICE_COMPILER_AVAILABLE: ";
+                    log += toString(device.getInfo<CL_DEVICE_COMPILER_AVAILABLE>());
+                    log += "\n";
+                }
+                //--------------------------------------------------------------------
+                //Info about context--------------------------------------------------
+                log += "Context info:\n";
+                log += "CL_CONTEXT_REFERENCE_COUNT: ";
+                log += std::to_string(context_.getInfo<CL_CONTEXT_REFERENCE_COUNT>());
                 log += "\n";
+                
+                log += "CL_CONTEXT_NUM_DEVICES: ";
+                log += std::to_string(context_.getInfo<CL_CONTEXT_NUM_DEVICES>());
+                log += "\n";
+                //--------------------------------------------------------------------
+            } else {
+                log += "CL_PLATFORM_NOT_FOUND\n";
             }
-            //--------------------------------------------------------------------
-            //Info about context--------------------------------------------------
-            log += "Context info:\n";
-            log += "CL_CONTEXT_REFERENCE_COUNT: ";
-            log += std::to_string(context_.getInfo<CL_CONTEXT_REFERENCE_COUNT>());
-            log += "\n";
-            
-            log += "CL_CONTEXT_NUM_DEVICES: ";
-            log += std::to_string(context_.getInfo<CL_CONTEXT_NUM_DEVICES>());
-            log += "\n";
-            //--------------------------------------------------------------------
         }
         catch (cl::Error& error) {
             log += "\nError:\n";
