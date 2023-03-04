@@ -80,7 +80,7 @@ namespace OpenCLApp {
         cl::Platform::get(&platforms);
         for (auto&& platform : platforms) {
             try {
-                platform.getDevices(CL_DEVICE_TYPE_CPU, &devices_);
+                platform.getDevices(CL_DEVICE_TYPE_GPU, &devices_);
             } 
             catch (cl::Error& error) {
                 platform.getDevices(CL_DEVICE_TYPE_CPU, &devices_);
