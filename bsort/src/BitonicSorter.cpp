@@ -18,7 +18,9 @@ int main() try {
     }
 
     OpenCLApp::BitonicSorter<TYPE> sort;
+    std::cerr << "begin\n";
     sort(data.begin(), data.end());
+    std::cerr << "end\n";
 
     for (auto& x: data) {
         std::cout << x << ' ';

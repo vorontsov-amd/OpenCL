@@ -1,9 +1,11 @@
 #pragma once
 #include <cmath>
 #include <fstream>
+#include <climits>
 #include <iostream>
 #include "sourcePath.h"
-#include <new>
+#include <bit>
+#include <cassert>
 
 #define CL_HPP_TARGET_OPENCL_VERSION 220
 #define CL_HPP_ENABLE_EXCEPTIONS
@@ -366,8 +368,8 @@ namespace OpenCLApp {
     template <typename Iterator> 
     void BitonicSorter<T>::operator() (Iterator begin, Iterator end, SortDirection direction) {
 
-        auto numOfElem  = std::distance(begin, end) + 1;
-        size_t capacity = 1 << ((int)std::ceil(log2(numOfElem)) - 1);
+        size_t numOfElem  = std::distance(begin, end) + 1;
+        size_t capacity = 1 << (CHAR_BIT * sizeof(numOfElem) - (std::countl_zero(numOfElem) - 1));
         if (capacity < 16) capacity = 16;
 
         T aggregate = std::numeric_limits<T>::max();
@@ -381,7 +383,7 @@ namespace OpenCLApp {
         auto local_size = kernels_[BSORT_INIT].getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(devices_[0]);
         size_t global_size = capacity / 8;
 
-        local_size = 1 << (int)std::trunc(log2(local_size)); 
+        local_size = 1 << (CHAR_BIT * sizeof(local_size) - std::countl_zero(local_size)); 
 
         if(global_size < local_size) {
             local_size = global_size;
