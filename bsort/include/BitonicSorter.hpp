@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include "sourcePath.h"
+#include <new>
 
 #define CL_HPP_TARGET_OPENCL_VERSION 220
 #define CL_HPP_ENABLE_EXCEPTIONS
@@ -24,8 +25,8 @@ namespace OpenCLApp {
     class BitonicSorter final
     {
     private:
-        cl::Platform           platform_;
         cl::vector<cl::Device> devices_;
+        cl::Platform           platform_;
         cl::Context            context_;
         cl::Program            program_;
         cl::vector<cl::Kernel> kernels_;
@@ -38,6 +39,7 @@ namespace OpenCLApp {
         std::string getOpenCLAppInfo(cl::Error& err) noexcept;
 
     private:
+        cl::Platform initPlatform();
         cl::vector<cl::Device> initDevices();
         cl::Program initProgram();
         cl::vector<cl::Kernel> initKernels();        
@@ -67,6 +69,27 @@ namespace OpenCLApp {
         }
 
     };
+
+    //------------------------------------------------------------------------------------------------------------------------------
+
+    template <typename T>
+    cl::Platform BitonicSorter<T>::initPlatform() {
+        
+        cl::vector<cl::Platform> platforms;
+
+        cl::Platform::get(&platforms);
+        for (auto&& platform : platforms) {
+            try {
+                platform.getDevices(CL_DEVICE_TYPE_GPU, &devices_);
+            } 
+            catch (cl::Error& error) {
+                platform.getDevices(CL_DEVICE_TYPE_CPU, &devices_);
+            }
+            if (!devices_.empty()) return platform;
+        }
+        throw std::runtime_error("Can't find any platform");
+    }
+
 
     //------------------------------------------------------------------------------------------------------------------------------
 
@@ -217,8 +240,7 @@ namespace OpenCLApp {
 
     template <typename T>
     BitonicSorter<T>::BitonicSorter() try : 
-        platform_ {cl::Platform::get()},
-        devices_  {initDevices()},
+        platform_ {initPlatform()},
         context_  {devices_},
         program_  {initProgram()},
         kernels_  {initKernels()},
@@ -322,7 +344,7 @@ namespace OpenCLApp {
 
             log += "what(): ";
             log += error.what();
-            log += ". err code = ";
+            log += ". Err code = ";
             log += std::to_string(error.err());
         }
         catch (std::exception& error) {
