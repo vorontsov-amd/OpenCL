@@ -87,7 +87,7 @@ namespace OpenCLApp {
             catch (cl::Error& error) {
                 platform.getDevices(CL_DEVICE_TYPE_CPU, &devices_);
             }
-            if (!devices_.empty())
+            if (!devices_.empty()) return platform;
         }
         throw std::runtime_error("Can't find any platform");
     }
