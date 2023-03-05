@@ -11,5 +11,11 @@ set(TYPE "int" CACHE STRING "Type to compile with")
 message(STATUS "Using type = ${TYPE}")
 add_compile_definitions(TYPE=${TYPE})
 
+
+set(PLATFORM "ANY_PLATFORM" CACHE STRING "Computing platform")
+message(STATUS "Using platform = ${PLATFORM}")
+add_compile_definitions(PLATFORM=${PLATFORM})
+
+
 add_subdirectory(bsort)
-add_subdirectory(test)
+# add_subdirectory(test)

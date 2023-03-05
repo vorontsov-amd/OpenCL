@@ -92,9 +92,10 @@ namespace OpenCLApp {
 
     template <typename T>
     cl::Platform BitonicSorter<T>::FindPlatform(const cl::vector<cl::Platform>& platforms, std::string platform_name) {
+        
         auto platform_it = std::find_if(platforms.begin(), platforms.end(), [&](cl::Platform platform) {
             auto pl_name = platform.getInfo<CL_PLATFORM_NAME>();
-            return pl_name.find(platform_name) != pl_name.size();
+            return pl_name.find(platform_name) != pl_name.npos;
         });
 
         if (platform_it != platforms.end()) {
@@ -396,7 +397,7 @@ namespace OpenCLApp {
     template <typename T>
     template <typename KernelFunctor> 
     cl::size_type BitonicSorter<T>::localSize(KernelFunctor&& functor, size_t global_size) {
-        auto local_size = functor.getKernel().template getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(devices_[0]);
+        auto local_size = functor.getKernel().template getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(devices_[0]);        
         local_size = 1 << (CHAR_BIT * sizeof(local_size) - std::countl_zero(local_size) - 1); 
         if(global_size < local_size) {
             local_size = global_size;
@@ -423,7 +424,7 @@ namespace OpenCLApp {
 
         /* Determine maximum work-group size */
         size_t global_size = capacity / 8;
-        auto local_size = localSize(bsortlInit_, capacity);
+        auto local_size = localSize(bsortlInit_, global_size);
 
         /* Enqueue initial sorting kernel */
         cl::EnqueueArgs args {queue_, cl::NullRange, global_size, local_size};

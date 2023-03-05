@@ -6,8 +6,11 @@
 const int SMALL_SIZE = 10;
 const int BIG_SIZE = 1 << 22;
 
+#ifndef PLATFORM
+    #define PLATFORM NVIDIA
+#endif
 
-#define PLATFORM OpenCLApp::Platform::ANY_PLATFORM
+#define USE_PLATFORM OpenCLApp::Platform::PLATFORM
 
 //------------------------------------------------------------------------------------------------------------------------------
 
@@ -27,7 +30,7 @@ bool operator == (std::vector<T>& lhs, std::vector<T>& rhs) {
 
 template <typename T> 
 void TestBody(size_t size, OpenCLApp::SortDirection direction) {
-    OpenCLApp::BitonicSorter<T> sort;
+    OpenCLApp::BitonicSorter<T> sort(USE_PLATFORM);
 
     auto rigth_border = std::numeric_limits<T>::max();
     auto left_border  = std::numeric_limits<T>::lowest();
@@ -59,7 +62,7 @@ template <>
 void TestBody<float>(size_t size, OpenCLApp::SortDirection direction) {
     using T = float;
     
-    OpenCLApp::BitonicSorter<T> sort;
+    OpenCLApp::BitonicSorter<T> sort(USE_PLATFORM);
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -86,7 +89,7 @@ template <>
 void TestBody<double>(size_t size, OpenCLApp::SortDirection direction) {
     using T = double;
     
-    OpenCLApp::BitonicSorter<T> sort;
+    OpenCLApp::BitonicSorter<T> sort(USE_PLATFORM);
 
     std::random_device rd;
     std::mt19937 gen(rd());
