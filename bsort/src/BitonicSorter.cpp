@@ -8,6 +8,12 @@
     #define TYPE int
 #endif
 
+
+#ifndef PLATFORM
+    #define PLATFORM OpenCLApp::Platform::NVIDIA
+#endif
+
+
 int main() try {
     size_t size = 0;
     std::cin >> size;
@@ -17,10 +23,8 @@ int main() try {
         std::cin >> data[i];
     }
 
-    OpenCLApp::BitonicSorter<TYPE> sort;
-    std::cerr << "begin\n";
+    OpenCLApp::BitonicSorter<TYPE> sort(PLATFORM);
     sort(data.begin(), data.end());
-    std::cerr << "end\n";
 
     for (auto& x: data) {
         std::cout << x << ' ';

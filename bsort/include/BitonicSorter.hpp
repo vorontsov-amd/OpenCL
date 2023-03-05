@@ -11,16 +11,21 @@
 #define CL_HPP_ENABLE_EXCEPTIONS
 
 #ifdef MAC
-    #include <OpenCL/cl.h>
+    #include <OpenCL/cl.hpp>
 #else
     #include <CL/opencl.hpp>
 #endif
+
 
 namespace OpenCLApp {
 
     enum SortDirection {
         INCREASING = 0,
         DECREASING = -1
+    };
+
+    enum class Platform {
+        NVIDIA, INTEL, ANY_PLATFORM
     };
 
     template <typename T>
@@ -31,22 +36,33 @@ namespace OpenCLApp {
         cl::Platform           platform_;
         cl::Context            context_;
         cl::Program            program_;
-        cl::vector<cl::Kernel> kernels_;
         cl::CommandQueue       queue_;
+
+        cl::KernelFunctor<cl::Buffer, cl::LocalSpaceArg>                     bsortlInit_;
+        cl::KernelFunctor<cl::Buffer, cl::LocalSpaceArg, unsigned, unsigned> bsortFirstStage_;
+        cl::KernelFunctor<cl::Buffer, cl::LocalSpaceArg, unsigned>           bsortSecondStage_;
+        cl::KernelFunctor<cl::Buffer, cl::LocalSpaceArg, unsigned, int>      bsortMerge_;
+        cl::KernelFunctor<cl::Buffer, cl::LocalSpaceArg, int>                bsortMergeLast_;
+
     public:
-        BitonicSorter();
+        BitonicSorter(Platform requiredPlatform = Platform::ANY_PLATFORM);
         
         template <typename Iterator>
         void operator() (Iterator begin, Iterator end, SortDirection direction = INCREASING); 
         std::string getOpenCLAppInfo(cl::Error& err) noexcept;
 
     private:
-        cl::Platform initPlatform();
-        cl::vector<cl::Device> initDevices();
+        cl::Platform initPlatform(Platform requiredPlatform);
         cl::Program initProgram();
-        cl::vector<cl::Kernel> initKernels();        
-    };
 
+        template <typename KernelFunctor> 
+        cl::size_type localSize(KernelFunctor&& functor, size_t global_ize);
+
+        cl::Platform FindPlatform(const cl::vector<cl::Platform>& platforms, std::string platform_name);
+        void InitDevices(const cl::Platform& platform, cl::vector<cl::Device>& devices);
+        bool CheckDevices(const cl::Platform& platform);
+
+    };
 };
 
 
@@ -57,17 +73,17 @@ namespace OpenCLApp {
     namespace {
         const char* SOURCE_FILE_NAME = CL_PROGRAM_PATH;
 
-        enum KernelID {
-            BSORT_INIT,
-            BSORT_FIRST_STAGE,
-            BSORT_SECOND_STAGE,
-            BSORT_MERGE,
-            BSORT_MERGE_LAST
-        };
-
         std::string toString(cl_bool x) {
             if (x) return "true";
             return "false";
+        }
+
+        template <typename Iterator>
+        size_t getBufferCapacity(Iterator begin, Iterator end) {
+            size_t numOfElem  = std::distance(begin, end) + 1;
+            size_t capacity = 1 << (CHAR_BIT * sizeof(numOfElem) - (std::countl_zero(numOfElem)));
+            if (capacity < 16) capacity = 16;
+            return capacity;
         }
 
     };
@@ -75,44 +91,68 @@ namespace OpenCLApp {
     //------------------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
-    cl::Platform BitonicSorter<T>::initPlatform() {
-        
-        cl::vector<cl::Platform> platforms;
+    cl::Platform BitonicSorter<T>::FindPlatform(const cl::vector<cl::Platform>& platforms, std::string platform_name) {
+        auto platform_it = std::find_if(platforms.begin(), platforms.end(), [&](cl::Platform platform) {
+            auto pl_name = platform.getInfo<CL_PLATFORM_NAME>();
+            return pl_name.find(platform_name) != pl_name.size();
+        });
 
-        cl::Platform::get(&platforms);
-        for (auto&& platform : platforms) {
-            try {
-                platform.getDevices(CL_DEVICE_TYPE_GPU, &devices_);
-            } 
-            catch (cl::Error& error) {
-                platform.getDevices(CL_DEVICE_TYPE_CPU, &devices_);
-            }
-            if (!devices_.empty()) return platform;
+        if (platform_it != platforms.end()) {
+            InitDevices(*platform_it, devices_);
+            return *platform_it;
         }
-
-        throw std::runtime_error("Can't find any platform");
+        else throw std::runtime_error("Can't find platform " + platform_name);
     }
-
 
     //------------------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
-    cl::vector<cl::Device> BitonicSorter<T>::initDevices() {
-        
-        cl::vector<cl::Device> devices;
-
+    bool BitonicSorter<T>::CheckDevices(const cl::Platform& platform) {
+        cl::vector<cl::Device> device;
         try {
-            platform_.getDevices(CL_DEVICE_TYPE_GPU, &devices);
-            return devices;
+            InitDevices(platform, device);
+            return true;
+        }
+        catch (cl::Error& err) {
+            return false;
+        }
+    }
+
+    //------------------------------------------------------------------------------------------------------------------------------
+
+    template <typename T>
+    void BitonicSorter<T>::InitDevices(const cl::Platform& platform, cl::vector<cl::Device>& devices) {
+        try {
+            platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
+        } 
+        catch (cl::Error& error) {
+            platform.getDevices(CL_DEVICE_TYPE_CPU, &devices);
+        }
+    }
+
+    //------------------------------------------------------------------------------------------------------------------------------
+
+    template <typename T>
+    cl::Platform BitonicSorter<T>::initPlatform(Platform requiredPlatform) {
+        
+        cl::vector<cl::Platform> platforms;
+
+        cl::Platform::get(&platforms);
+
+        if (requiredPlatform == Platform::NVIDIA) {
+            return FindPlatform(platforms, "NVIDIA");
+        } else if (requiredPlatform == Platform::INTEL) {
+            return FindPlatform(platforms, "Inter(R)");
+        } else {
+            for (auto&& platform : platforms) {    
+                if (CheckDevices(platform)) {
+                    InitDevices(platform, devices_);
+                    return platform;
+                }
+            }
         }
 
-        catch (cl::Error& error) {
-            if (error.err() == CL_DEVICE_NOT_FOUND) {
-                platform_.getDevices(CL_DEVICE_TYPE_CPU, &devices);
-                return devices;
-            }
-            else throw; 
-        }
+        throw std::runtime_error("Can't find any platform");
     }
 
     //------------------------------------------------------------------------------------------------------------------------------
@@ -227,27 +267,16 @@ namespace OpenCLApp {
     //------------------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
-    cl::vector<cl::Kernel> BitonicSorter<T>::initKernels() {
-        cl::vector<cl::Kernel> kernels(5);
-
-        kernels[BSORT_INIT]        = {program_, "bsort_init"};
-        kernels[BSORT_FIRST_STAGE] = {program_, "bsort_first_stage"};
-        kernels[BSORT_SECOND_STAGE]= {program_, "bsort_second_stage"};
-        kernels[BSORT_MERGE]       = {program_, "bsort_merge"};
-        kernels[BSORT_MERGE_LAST]  = {program_, "bsort_merge_last"};
-
-        return kernels;
-    }
-
-    //------------------------------------------------------------------------------------------------------------------------------
-
-    template <typename T>
-    BitonicSorter<T>::BitonicSorter() try : 
-        platform_ {initPlatform()},
-        context_  {devices_},
-        program_  {initProgram()},
-        kernels_  {initKernels()},
-        queue_    {context_, devices_[0]}
+    BitonicSorter<T>::BitonicSorter(Platform requiredPlatform) try : 
+        platform_         {initPlatform(requiredPlatform)},
+        context_          {devices_},
+        program_          {initProgram()},
+        queue_            {context_, devices_[0]},
+        bsortlInit_       {program_, "bsort_init"},
+        bsortFirstStage_  {program_, "bsort_first_stage"},
+        bsortSecondStage_ {program_, "bsort_second_stage"},
+        bsortMerge_       {program_, "bsort_merge"},
+        bsortMergeLast_   {program_, "bsort_merge_last"}
         {}
 
     catch (cl::Error& error) {
@@ -365,77 +394,56 @@ namespace OpenCLApp {
     //------------------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
+    template <typename KernelFunctor> 
+    cl::size_type BitonicSorter<T>::localSize(KernelFunctor&& functor, size_t global_size) {
+        auto local_size = functor.getKernel().template getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(devices_[0]);
+        local_size = 1 << (CHAR_BIT * sizeof(local_size) - std::countl_zero(local_size) - 1); 
+        if(global_size < local_size) {
+            local_size = global_size;
+        }
+        return local_size;
+    }
+
+    //------------------------------------------------------------------------------------------------------------------------------
+
+    template <typename T>
     template <typename Iterator> 
     void BitonicSorter<T>::operator() (Iterator begin, Iterator end, SortDirection direction) {
 
-        size_t numOfElem  = std::distance(begin, end) + 1;
-        size_t capacity = 1 << (CHAR_BIT * sizeof(numOfElem) - (std::countl_zero(numOfElem) - 1));
-        if (capacity < 16) capacity = 16;
+        /* Create buffer */
+        size_t capacity = getBufferCapacity(begin, end);
 
         T aggregate = std::numeric_limits<T>::max();
         if (direction == DECREASING) aggregate = std::numeric_limits<T>::lowest();
 
         std::vector<T> data(capacity, aggregate);
         std::copy(begin, end, data.begin());
-
+        
         cl::Buffer buffer(context_, data.begin(), data.end(), false);
 
-        auto local_size = kernels_[BSORT_INIT].getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(devices_[0]);
+        /* Determine maximum work-group size */
         size_t global_size = capacity / 8;
+        auto local_size = localSize(bsortlInit_, global_size);
+        
+        /* Enqueue initial sorting kernel */
+        cl::EnqueueArgs args {queue_, cl::NullRange, global_size, local_size};
+        auto localBuffer = cl::Local(8 * local_size * sizeof(T));
+        bsortlInit_(args, buffer, localBuffer);
 
-        local_size = 1 << (CHAR_BIT * sizeof(local_size) - std::countl_zero(local_size)); 
-
-        if(global_size < local_size) {
-            local_size = global_size;
-        }
-
-        kernels_[BSORT_INIT].setArg(0, buffer);
-        kernels_[BSORT_INIT].setArg(1, 8 * local_size * sizeof(T), NULL);
-
-        // Create queue and enqueue kernel-execution command
-        cl::NDRange offset {0};
-        queue_.enqueueNDRangeKernel(kernels_[BSORT_INIT], offset, global_size, local_size);
-
-        kernels_[BSORT_SECOND_STAGE].setArg(0, buffer);
-        kernels_[BSORT_SECOND_STAGE].setArg(1, 8 * local_size * sizeof(T), NULL);
-        kernels_[BSORT_FIRST_STAGE].setArg(0, buffer);
-        kernels_[BSORT_FIRST_STAGE].setArg(1, 8 * local_size * sizeof(T), NULL);
-
+        /* Execute further stages */
         int num_stages = global_size/local_size;        
-
         for(int high_stage = 2; high_stage < num_stages; high_stage <<= 1) {
-
-            kernels_[BSORT_SECOND_STAGE].setArg(2, high_stage);      
-            kernels_[BSORT_FIRST_STAGE].setArg(3, high_stage);
-
             for(int stage = high_stage; stage > 1; stage >>= 1) {
-                kernels_[BSORT_FIRST_STAGE].setArg(2, stage);
-                queue_.enqueueNDRangeKernel(kernels_[BSORT_FIRST_STAGE], offset, global_size, local_size); 
+                bsortFirstStage_(args, buffer, localBuffer, stage, high_stage);
             }
-
-            cl::copy(queue_, buffer, data.begin(), data.end());
-
-            queue_.enqueueNDRangeKernel(kernels_[BSORT_SECOND_STAGE], offset, global_size, local_size); 
-
-            cl::copy(queue_, buffer, data.begin(), data.end());
+            bsortSecondStage_(args, buffer, localBuffer, high_stage);
         }
-
-        kernels_[BSORT_MERGE].setArg(0, buffer);
-        kernels_[BSORT_MERGE].setArg(1, 8 * local_size * sizeof(T), NULL);
-        kernels_[BSORT_MERGE_LAST].setArg(0, buffer);
-        kernels_[BSORT_MERGE_LAST].setArg(1, 8 * local_size * sizeof(T), NULL);
-
-        /* Set the sort direction */
-        kernels_[BSORT_MERGE].setArg(3, direction);
-        kernels_[BSORT_MERGE_LAST].setArg(2, direction);
 
         /* Perform the bitonic merge */
         for(int stage = num_stages; stage > 1; stage >>= 1) {
-            kernels_[BSORT_MERGE].setArg(2, stage);
-            queue_.enqueueNDRangeKernel(kernels_[BSORT_MERGE], offset, global_size, local_size); 
+            bsortMerge_(args, buffer, localBuffer, stage, direction); 
         }
-
-        queue_.enqueueNDRangeKernel(kernels_[BSORT_MERGE_LAST], offset, global_size, local_size); 
+        bsortMergeLast_(args, buffer, localBuffer, direction);
 
         cl::copy(queue_, buffer, begin, end);
     }

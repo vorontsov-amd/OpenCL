@@ -6,6 +6,9 @@
 const int SMALL_SIZE = 10;
 const int BIG_SIZE = 1 << 22;
 
+
+#define PLATFORM OpenCLApp::Platform::ANY_PLATFORM
+
 //------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -107,7 +110,7 @@ void TestBody<double>(size_t size, OpenCLApp::SortDirection direction) {
 //------------------------------------------------------------------------------------------------------------------------------
 
 
-#define TEST_CREATER(type)                                          \
+#define TYPE_TEST_CREATER(type)                                     \
     TEST(BitonicSortTest, test_##type##_1) {                        \
         ::TestBody<type>(SMALL_SIZE, OpenCLApp::INCREASING);        \
     }                                                               \
@@ -127,17 +130,17 @@ void TestBody<double>(size_t size, OpenCLApp::SortDirection direction) {
 
 //------------------------------------------------------------------------------------------------------------------------------
 
-TEST_CREATER(float)
+TYPE_TEST_CREATER(float)
 
-TEST_CREATER(double)
+TYPE_TEST_CREATER(double)
 
-TEST_CREATER(int)
+TYPE_TEST_CREATER(int)
 
-TEST_CREATER(unsigned)
+TYPE_TEST_CREATER(unsigned)
 
-TEST_CREATER(int64_t)
+TYPE_TEST_CREATER(int64_t)
 
-TEST_CREATER(uint64_t)
+TYPE_TEST_CREATER(uint64_t)
 
 
 //------------------------------------------------------------------------------------------------------------------------------
