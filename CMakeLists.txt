@@ -16,9 +16,12 @@ set(PLATFORM "ANY_PLATFORM" CACHE STRING "Computing platform")
 message(STATUS "Using platform = ${PLATFORM}")
 add_compile_definitions(PLATFORM=${PLATFORM})
 
+
 add_subdirectory(3rd-party/OpenCL-Headers EXCLUDE_FROM_ALL)
 add_subdirectory(3rd-party/OpenCL-ICD-Loader EXCLUDE_FROM_ALL)
 add_subdirectory(3rd-party/OpenCL-CLHPP EXCLUDE_FROM_ALL)
 
+set(OpenCLLibs OpenCL::OpenCL OpenCL::Headers OpenCL::HeadersCpp)
+
 add_subdirectory(bsort)
-# add_subdirectory(test)
+add_subdirectory(test)
