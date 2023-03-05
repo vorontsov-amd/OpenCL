@@ -423,8 +423,8 @@ namespace OpenCLApp {
 
         /* Determine maximum work-group size */
         size_t global_size = capacity / 8;
-        auto local_size = localSize(bsortlInit_, global_size);
-        
+        auto local_size = localSize(bsortlInit_, capacity);
+
         /* Enqueue initial sorting kernel */
         cl::EnqueueArgs args {queue_, cl::NullRange, global_size, local_size};
         auto localBuffer = cl::Local(8 * local_size * sizeof(T));
