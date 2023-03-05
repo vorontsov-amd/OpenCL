@@ -143,7 +143,7 @@ namespace OpenCLApp {
         if (requiredPlatform == Platform::NVIDIA) {
             return FindPlatform(platforms, "NVIDIA");
         } else if (requiredPlatform == Platform::INTEL) {
-            return FindPlatform(platforms, "Inter(R)");
+            return FindPlatform(platforms, "Intel(R)");
         } else {
             for (auto&& platform : platforms) {    
                 if (CheckDevices(platform)) {
