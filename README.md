@@ -27,7 +27,7 @@ $ cmake --build
 To select the type of input surrenders or platform use:
 
 ``` cmd
-$ сmake .. -DTYPE=type -PLATFORM=platform
+$ сmake .. -DTYPE=type -DPLATFORM=platform
 $ cmake --build
 ```
 where "type" is the built-in type of the C/C++ languages (except char), "platform" is NVIDIA, INTEL or ANY_PLATFORM. The default setting is int and NVIDIA.
