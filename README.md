@@ -17,19 +17,20 @@ The following applications have to be installed:
 To compile each of the cache you need to use сmake in the directory build:
 
 ``` cmd
+$ git submodule init && git submodule update
 $ mkdir build
 $ cd build
 $ сmake ..
 $ cmake --build
 ```
 
-To select the type of input surrenders use:
+To select the type of input surrenders or platform use:
 
 ``` cmd
-$ сmake .. -DTYPE=type
+$ сmake .. -DTYPE=type -PLATFORM=platform
 $ cmake --build
 ```
-where "type" is the built-in type of the C/C++ languages (except char). The default setting is int.
+where "type" is the built-in type of the C/C++ languages (except char), "platform" is NVIDIA, INTEL or ANY_PLATFORM. The default setting is int and NVIDIA.
 ## Run the program:
 
 You can find all binaries in dir build/bin
