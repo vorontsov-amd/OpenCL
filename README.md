@@ -31,7 +31,7 @@ $ сmake .. -DTYPE=type -DPLATFORM=platform
 $ cmake --build
 ```
 where "type" is the built-in type of the C/C++ languages (except char), "platform" is NVIDIA, INTEL or ANY_PLATFORM. The default setting is int and NVIDIA.
-## Run the program:
+## Run the program
 
 You can find all binaries in dir build/bin
 
@@ -45,3 +45,7 @@ Test for Sort:
 ``` cmd
 $ ./bin/testBsort
 ```
+
+## Perfomance
+My test results:
+![](https://sun9-13.userapi.com/impg/_7K4l9BdUviqero5LLD0T13b2XV4q9GcKW4Smw/PD2zwcTLY1M.jpg?size=1440x900&quality=96&sign=47fe9db1dfe107c429ae9a540661f319&type=album)
