@@ -7,10 +7,10 @@ const int SMALL_SIZE = 10;
 const int BIG_SIZE = 1 << 22;
 
 #ifndef PLATFORM
-    #define PLATFORM NVIDIA
+    #define PLATFORM "NVIDIA"
 #endif
 
-#define USE_PLATFORM OpenCLApp::Platform::PLATFORM
+#define USE_PLATFORM "NVIDIA"
 
 //------------------------------------------------------------------------------------------------------------------------------
 

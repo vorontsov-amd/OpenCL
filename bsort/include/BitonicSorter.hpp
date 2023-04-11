@@ -6,6 +6,7 @@
 #include "sourcePath.h"
 #include <bit>
 #include <cassert>
+#include <string>
 
 #define CL_HPP_TARGET_OPENCL_VERSION 220
 #define CL_HPP_ENABLE_EXCEPTIONS
@@ -22,10 +23,6 @@ namespace OpenCLApp {
     enum SortDirection {
         INCREASING = 0,
         DECREASING = -1
-    };
-
-    enum class Platform {
-        NVIDIA, INTEL, ANY_PLATFORM
     };
 
     template <typename T>
@@ -45,14 +42,14 @@ namespace OpenCLApp {
         cl::KernelFunctor<cl::Buffer, cl::LocalSpaceArg, int>                bsortMergeLast_;
 
     public:
-        BitonicSorter(Platform requiredPlatform = Platform::ANY_PLATFORM);
+        BitonicSorter(std::string requiredPlatform);
         
         template <typename Iterator>
         void operator() (Iterator begin, Iterator end, SortDirection direction = INCREASING); 
         std::string getOpenCLAppInfo(cl::Error& err) noexcept;
 
     private:
-        cl::Platform initPlatform(Platform requiredPlatform);
+        cl::Platform initPlatform(std::string requiredPlatform);
         cl::Program initProgram();
 
         template <typename KernelFunctor> 
@@ -60,8 +57,6 @@ namespace OpenCLApp {
 
         cl::Platform FindPlatform(const cl::vector<cl::Platform>& platforms, std::string platform_name);
         void InitDevices(const cl::Platform& platform, cl::vector<cl::Device>& devices);
-        bool CheckDevices(const cl::Platform& platform);
-
     };
 };
 
@@ -108,20 +103,6 @@ namespace OpenCLApp {
     //------------------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
-    bool BitonicSorter<T>::CheckDevices(const cl::Platform& platform) {
-        cl::vector<cl::Device> device;
-        try {
-            InitDevices(platform, device);
-            return true;
-        }
-        catch (cl::Error& err) {
-            return false;
-        }
-    }
-
-    //------------------------------------------------------------------------------------------------------------------------------
-
-    template <typename T>
     void BitonicSorter<T>::InitDevices(const cl::Platform& platform, cl::vector<cl::Device>& devices) {
         try {
             platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
@@ -134,25 +115,10 @@ namespace OpenCLApp {
     //------------------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
-    cl::Platform BitonicSorter<T>::initPlatform(Platform requiredPlatform) {
-        
+    cl::Platform BitonicSorter<T>::initPlatform(std::string requiredPlatform) {
         cl::vector<cl::Platform> platforms;
-
         cl::Platform::get(&platforms);
-
-        if (requiredPlatform == Platform::NVIDIA) {
-            return FindPlatform(platforms, "NVIDIA");
-        } else if (requiredPlatform == Platform::INTEL) {
-            return FindPlatform(platforms, "Intel(R)");
-        } else {
-            for (auto&& platform : platforms) {    
-                if (CheckDevices(platform)) {
-                    InitDevices(platform, devices_);
-                    return platform;
-                }
-            }
-        }
-
+        return FindPlatform(platforms, requiredPlatform);
         throw std::runtime_error("Can't find any platform");
     }
 
@@ -268,7 +234,7 @@ namespace OpenCLApp {
     //------------------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
-    BitonicSorter<T>::BitonicSorter(Platform requiredPlatform) try : 
+    BitonicSorter<T>::BitonicSorter(std::string requiredPlatform) try : 
         platform_         {initPlatform(requiredPlatform)},
         context_          {devices_},
         program_          {initProgram()},
