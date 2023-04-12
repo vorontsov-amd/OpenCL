@@ -6,6 +6,8 @@
 #include "sourcePath.h"
 #include <bit>
 #include <cassert>
+#include <iterator>
+#include <ostream>
 #include <string>
 
 #define CL_HPP_TARGET_OPENCL_VERSION 220
@@ -105,7 +107,7 @@ namespace OpenCLApp {
     template <typename T>
     void BitonicSorter<T>::InitDevices(const cl::Platform& platform, cl::vector<cl::Device>& devices) {
         try {
-            platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
+          platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
         } 
         catch (cl::Error& error) {
             platform.getDevices(CL_DEVICE_TYPE_CPU, &devices);
@@ -376,7 +378,7 @@ namespace OpenCLApp {
     template <typename T>
     template <typename Iterator> 
     void BitonicSorter<T>::operator() (Iterator begin, Iterator end, SortDirection direction) {
-
+        std::cout << devices_.front().getInfo<CL_DEVICE_NAME>() << '\n';
         /* Create buffer */
         size_t capacity = getBufferCapacity(begin, end);
 
@@ -391,7 +393,7 @@ namespace OpenCLApp {
         /* Determine maximum work-group size */
         size_t global_size = capacity / 8;
         auto local_size = localSize(bsortlInit_, global_size);
-
+        std::cout << global_size << " " << local_size << std::endl;
         /* Enqueue initial sorting kernel */
         cl::EnqueueArgs args {queue_, cl::NullRange, global_size, local_size};
         auto localBuffer = cl::Local(8 * local_size * sizeof(T));

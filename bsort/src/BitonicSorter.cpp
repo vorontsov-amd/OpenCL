@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <exception>
 #include <iostream>
+#include <ostream>
 #include <random>
 #include <string>
 #include <vector>
@@ -16,7 +17,7 @@
 #define TYPE int
 #endif
 
-using T = TYPE;
+using T = int;
 
 #ifndef PLATFORM
 #define PLATFORM NVIDIA
@@ -24,7 +25,8 @@ using T = TYPE;
 
 #define USE_PLATFORM OpenCLApp::Platform::PLATFORM
 
-namespace po = boost::program_options;
+namespace po  = boost::program_options;
+namespace chr = std::chrono;
 
 auto ParseConsoleArgument(int ac, const char** av) {
   std::string platform;
@@ -46,16 +48,12 @@ auto ParseConsoleArgument(int ac, const char** av) {
     std::cout << desc << "\n";
     std::exit(0);
   }
-  if (vm.count("platform")) {
-    std::cout << "Current platform " << platform << ".\n";
-  }
   if (vm.count("test")) {
     std::cout << "Number of random elements for test " << size << ".\n";
   } else {
     isTestMode = false;
     std::cin >> size;
   }
-
   return std::make_tuple(platform, size, isTestMode);
 }
 
@@ -76,18 +74,51 @@ auto fillData(std::size_t size, bool isTestMode) {
   return data;
 }
 
+void RunTestProgram(std::string platformName, std::size_t size) {
+  std::vector<T> data(size);
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> rand(-1000, 1000);
+
+  for (auto&& x : data) x = rand(gen);
+  std::vector dataCopy = data;
+
+  auto start = chr::high_resolution_clock::now();
+  std::sort(dataCopy.begin(), dataCopy.end());
+  auto end   = chr::high_resolution_clock::now();
+  std::cout << "std::sort() time: "
+            << std::chrono::duration_cast<chr::duration<float>>(end - start).count()
+            << " sec." << std::endl;
+
+  OpenCLApp::BitonicSorter<T> sort(platformName);
+  start = chr::high_resolution_clock::now();
+  sort(data.begin(), data.end());
+  end   = chr::high_resolution_clock::now();
+  std::cout << "My bsort() time: "
+            << std::chrono::duration_cast<chr::duration<float>>(end - start).count()
+            << " sec." << std::endl;
+}
+
 int main(int ac, const char **av) try {
   auto [platform, size, isTestMode] = ParseConsoleArgument(ac, av);
 
-  auto&& data = fillData(size, isTestMode);
-
-  OpenCLApp::BitonicSorter<T> sort(platform);
-  sort(data.begin(), data.end());
-
-  for (auto &x : data) {
-    std::cout << x << ' ';
+  if (isTestMode) {
+    RunTestProgram(platform, size);
   }
-  std::cout << std::endl;
+//  } else {
+//    RunGeneralProgram();
+//  }
+//
+//  auto&& data = fillData(size, isTestMode);
+//
+//  OpenCLApp::BitonicSorter<T> sort(platform);
+//  sort(data.begin(), data.end());
+//
+//  for (auto &x : data) {
+//    std::cout << x << ' ';
+//  }
+//  std::cout << std::endl;
 }
 
 catch (cl::Error &error) {
