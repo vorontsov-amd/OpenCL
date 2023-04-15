@@ -3,9 +3,10 @@
 #include <iostream>
 #include <algorithm>
 #include <chrono>
+#include <boost/program_options.hpp>
 
 #ifndef TYPE
-    #define TYPE float
+    #define TYPE int
 #endif
 
 
@@ -15,8 +16,41 @@
 
 #define USE_PLATFORM OpenCLApp::Platform::PLATFORM
 
+namespace po = boost::program_options;
 
-int main() try {
+auto ParseConsoleArgument(int ac, const char** av) {
+  std::string platform;
+  std::size_t size = 0;
+  bool isTestMode = true;
+
+  po::options_description desc("Allowed options");
+  desc.add_options()
+      ("help", "produce help message")
+      ("platform", po::value<std::string>(&platform)->default_value("NVIDIA"), "platform for computing. By defaul NVIDIA")
+      ("test", po::value<std::size_t>(&size), "the amount of elements to generate N random numbers")
+  ;
+
+  po::variables_map vm;
+  po::store(po::parse_command_line(ac, av, desc), vm);
+  po::notify(vm);
+
+  if (vm.count("help")) {
+    std::cout << desc << "\n";
+    std::exit(0);
+  }
+  if (vm.count("test")) {
+    std::cout << "Number of random elements for test " << size << ".\n";
+  } else {
+    isTestMode = false;
+    std::cin >> size;
+  }
+  return std::make_tuple(platform, size, isTestMode);
+}
+
+
+int main(int ac, const char** av) try {
+
+    auto [platform, size, isTestMode] = ParseConsoleArgument(ac, av);
 
     using namespace std::chrono;
     using fseconds = duration<float>;
@@ -31,53 +65,21 @@ int main() try {
     std::mt19937 gen(rd());
     std::uniform_real_distribution<TYPE> random(left_border, rigth_border);
 
-    std::vector<float> my_time;
-    std::vector<float> std_time;
+    std::vector<TYPE> data(size);
+    for (auto& x: data) x = random(gen);
 
-    for (size_t i = 20; i <= 25; ++i) {
-        size_t size = 1 << i;
- 
-        std::vector<TYPE> data(size);
-        for (auto& x: data) x = random(gen);
+    std::vector<TYPE> copy = data;
+    auto start = system_clock::now();
+    sort(data.begin(), data.end());
+    auto end = system_clock::now() - start;
+    auto my_time = std::chrono::duration_cast<fseconds>(end).count();
+    start = system_clock::now();
+    std::sort(copy.begin(), copy.end());
+    end = system_clock::now() - start;
+    auto std_time = std::chrono::duration_cast<fseconds>(end).count();
 
-        std::vector<TYPE> copy = data;
-        auto start = system_clock::now();
-        sort(data.begin(), data.end());
-        auto end = system_clock::now() - start;
-        my_time.push_back(duration_cast<fseconds>(end).count());
-        start = system_clock::now();
-        std::sort(copy.begin(), copy.end());
-        end = system_clock::now() - start;
-        std_time.push_back(duration_cast<fseconds>(end).count());
-    }
-
-    std::ofstream out("data.txt");
-    assert(out.is_open());
-    for (auto x: my_time) {
-        out << x;
-        out << '\n';
-    }
-    for (auto x: std_time) {
-        out << x;
-        out << '\n';
-    }
-
-    out.close();
-    // size_t size = 0;
-    // std::cin >> size;
-
-    // std::vector<TYPE> data(size);
-    // for (size_t i = 0; i < size; ++i) {
-    //     std::cin >> data[i];
-    // }
-
-    // OpenCLApp::BitonicSorter<TYPE> sort(USE_PLATFORM);
-    // sort(data.begin(), data.end());
-
-    // for (auto& x: data) {
-    //     std::cout << x << ' ';
-    // }
-    // std::cout << std::endl;
+    std::cout  << "my time: \n" << my_time << '\n';
+    std::cout  << "std time: \n" << std_time << '\n';
 }
 
 catch (cl::Error& error) {
